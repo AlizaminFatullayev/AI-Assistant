@@ -40,12 +40,15 @@ export default function ChatPage() {
         { id: Date.now() + 1, role: 'model', content: reply },
       ]);
     } catch (err) {
+      const isQuota = err.isQuota || err.status === 429;
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           role: 'model',
-          content: 'Üzr istəyirəm, xəta baş verdi. Zəhmət olmasa yenidən cəhd edin.',
+          content: isQuota
+            ? '⚠️ Gündəlik AI sorğu limiti dolub. Zəhmət olmasa bir neçə dəqiqə sonra yenidən cəhd edin.'
+            : 'Üzr istəyirəm, xəta baş verdi. Zəhmət olmasa yenidən cəhd edin.',
         },
       ]);
     } finally {
@@ -129,10 +132,11 @@ export default function ChatPage() {
                           { id: Date.now() + 1, role: 'model', content: reply },
                         ]);
                       })
-                      .catch(() => {
+                      .catch((err) => {
+                        const isQuota = err.isQuota || err.status === 429;
                         setMessages((prev) => [
                           ...prev,
-                          { id: Date.now() + 1, role: 'model', content: 'Üzr istəyirəm, xəta baş verdi.' },
+                          { id: Date.now() + 1, role: 'model', content: isQuota ? '⚠️ Gündəlik AI sorğu limiti dolub. Bir neçə dəqiqə sonra yenidən cəhd edin.' : 'Üzr istəyirəm, xəta baş verdi.' },
                         ]);
                       })
                       .finally(() => setLoading(false));

@@ -30,6 +30,13 @@ QAYDALAR:
 - Əgər sual menyu ilə əlaqəli deyilsə, mehriban şəkildə yalnız yemək mövzusunda kömək edə biləcəyini bildir.`;
 }
 
+// Model fallback chain — tries each in order until one works
+const MODEL_FALLBACKS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+];
+
 let genAI = null;
 
 export function initGemini() {
@@ -42,27 +49,42 @@ export function initGemini() {
 }
 
 export async function sendMessage(userMessage, history = []) {
-  // Mock mode when no API key
   if (!API_KEY) {
     return getMockResponse(userMessage);
   }
 
   if (!genAI) initGemini();
 
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
-    systemInstruction: buildSystemPrompt(),
-  });
+  const chatHistory = history.map((msg) => ({
+    role: msg.role,
+    parts: [{ text: msg.content }],
+  }));
 
-  const chat = model.startChat({
-    history: history.map((msg) => ({
-      role: msg.role,
-      parts: [{ text: msg.content }],
-    })),
-  });
+  let lastError;
+  for (const modelName of MODEL_FALLBACKS) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: buildSystemPrompt(),
+      });
+      const chat = model.startChat({ history: chatHistory });
+      const result = await chat.sendMessage(userMessage);
+      return result.response.text();
+    } catch (err) {
+      lastError = err;
+      // Only continue fallback on rate-limit errors
+      if (err.status === 429) {
+        console.warn(`${modelName} quota exceeded, trying next model...`);
+        continue;
+      }
+      throw err;
+    }
+  }
 
-  const result = await chat.sendMessage(userMessage);
-  return result.response.text();
+  // All models exhausted — throw with clear message
+  const quotaErr = new Error('QUOTA_EXCEEDED');
+  quotaErr.isQuota = true;
+  throw quotaErr;
 }
 
 // Mock responses for demo without API key
