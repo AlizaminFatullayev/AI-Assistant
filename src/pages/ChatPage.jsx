@@ -112,7 +112,32 @@ export default function ChatPage() {
             {suggestions.map((s) => (
               <button
                 key={s}
-                onClick={() => setInput(s)}
+                onClick={() => {
+                  setInput(s);
+                  // Small delay so state updates before sending
+                  setTimeout(() => {
+                    const text = s.trim();
+                    if (!text) return;
+                    const userMsg = { id: Date.now(), role: 'user', content: text };
+                    setMessages((prev) => [...prev, userMsg]);
+                    setInput('');
+                    setLoading(true);
+                    sendMessage(text, [])
+                      .then((reply) => {
+                        setMessages((prev) => [
+                          ...prev,
+                          { id: Date.now() + 1, role: 'model', content: reply },
+                        ]);
+                      })
+                      .catch(() => {
+                        setMessages((prev) => [
+                          ...prev,
+                          { id: Date.now() + 1, role: 'model', content: 'Üzr istəyirəm, xəta baş verdi.' },
+                        ]);
+                      })
+                      .finally(() => setLoading(false));
+                  }, 0);
+                }}
                 className="text-sm px-4 py-2 rounded-full border border-primary/30 text-primary hover:bg-primary/10 transition-colors font-medium"
               >
                 {s}

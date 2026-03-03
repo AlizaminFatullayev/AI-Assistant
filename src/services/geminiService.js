@@ -30,7 +30,6 @@ QAYDALAR:
 - Əgər sual menyu ilə əlaqəli deyilsə, mehriban şəkildə yalnız yemək mövzusunda kömək edə biləcəyini bildir.`;
 }
 
-let chatSession = null;
 let genAI = null;
 
 export function initGemini() {
@@ -51,7 +50,7 @@ export async function sendMessage(userMessage, history = []) {
   if (!genAI) initGemini();
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.0-flash',
     systemInstruction: buildSystemPrompt(),
   });
 
